@@ -1,12 +1,15 @@
-import { DynamoDB } from 'aws-sdk'
+import { DynamoDB } from 'aws-sdk';
 import {
     APIGatewayProxyEvent,
     APIGatewayProxyResult,
     Context,
-} from 'aws-lambda'
+} from 'aws-lambda';
 
-import { v4 } from 'uuid'
-const dbClient = new DynamoDB.DocumentClient()
+import { v4 } from 'uuid';
+
+const TABLE_NAME = process.env.TABLE_NAME;
+const dbClient = new DynamoDB.DocumentClient();
+
 async function handler(
     event: APIGatewayProxyEvent,
     context: Context
@@ -14,22 +17,22 @@ async function handler(
     const result: APIGatewayProxyResult = {
         statusCode: 200,
         body: 'Hello from DynamoDB',
-    }
+    };
 
-    const item = {
-        spaceId: v4(),
-    }
+    const item =
+        typeof event.body === 'object' ? event.body : JSON.parse(event.body);
+    item.spaceId = v4();
 
     try {
         await dbClient
             .put({
-                TableName: 'SpacesTable',
+                TableName: TABLE_NAME!,
                 Item: item,
             })
-            .promise()
+            .promise();
     } catch (error: any) {
-        result.body = error.message
+        result.body = error.message;
     }
 
-    return result
+    return result;
 }
