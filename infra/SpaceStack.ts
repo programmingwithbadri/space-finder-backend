@@ -16,6 +16,8 @@ export class SpaceStack extends Stack {
         primaryKey: 'spaceId',
         createLambdaPath: 'Create',
         readLambdaPath: 'Read',
+        updateLambdaPath: 'Update',
+        deleteLambdaPath: 'Delete',
         secondaryIndexes: ['location'],
     });
 
@@ -41,5 +43,13 @@ export class SpaceStack extends Stack {
         );
 
         spaceResource.addMethod('GET', this.spacesTable.readLambdaIntegration);
+        spaceResource.addMethod(
+            'PUT',
+            this.spacesTable.updateLambdaIntegration
+        );
+        spaceResource.addMethod(
+            'DELETE',
+            this.spacesTable.deleteLambdaIntegration
+        );
     }
 }
