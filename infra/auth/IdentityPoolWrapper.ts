@@ -3,6 +3,7 @@ import {
     UserPool,
     UserPoolClient,
     CfnIdentityPool,
+    CfnIdentityPoolRoleAttachment,
 } from 'aws-cdk-lib/aws-cognito';
 import {
     Effect,
@@ -21,7 +22,7 @@ export class IdentityPoolWrapper {
 
     private authenticatedRole: Role;
     private unAuthenticatedRole: Role;
-    private adminRole: Role;
+    public adminRole: Role;
 
     constructor(
         scope: Construct,
@@ -32,11 +33,12 @@ export class IdentityPoolWrapper {
         this.userPool = userPool;
         this.userPoolClient = userPoolClient;
         this.initialize();
-        this.initializeRoles();
     }
 
     private initialize() {
         this.initializeIdentityPool();
+        this.initializeRoles();
+        this.attachRoles();
     }
 
     private initializeIdentityPool() {
@@ -101,26 +103,21 @@ export class IdentityPoolWrapper {
             }
         );
 
-        this.adminRole = new Role(
-            this.scope,
-            'CognitoDefaultAuthenticatedRole',
-            {
-                assumedBy: new FederatedPrincipal(
-                    'cognito-identity.amazonaws.com',
-                    {
-                        StringEquals: {
-                            'cognito-identity.amazonaws.com:aud':
-                                this.identityPool.ref,
-                        },
-                        'ForAnyValue:StringLike': {
-                            'cognito-identity.amazonaws.com:amr':
-                                'authenticated',
-                        },
+        this.adminRole = new Role(this.scope, 'CognitoAdminRole', {
+            assumedBy: new FederatedPrincipal(
+                'cognito-identity.amazonaws.com',
+                {
+                    StringEquals: {
+                        'cognito-identity.amazonaws.com:aud':
+                            this.identityPool.ref,
                     },
-                    'sts:AssumeRoleWithWebIdentity'
-                ),
-            }
-        );
+                    'ForAnyValue:StringLike': {
+                        'cognito-identity.amazonaws.com:amr': 'authenticated',
+                    },
+                },
+                'sts:AssumeRoleWithWebIdentity'
+            ),
+        });
 
         this.adminRole.addToPolicy(
             new PolicyStatement({
@@ -129,5 +126,22 @@ export class IdentityPoolWrapper {
                 resources: ['*'],
             })
         );
+    }
+
+    private attachRoles() {
+        new CfnIdentityPoolRoleAttachment(this.scope, 'RolesAttachment', {
+            identityPoolId: this.identityPool.ref,
+            roles: {
+                authenticated: this.authenticatedRole.roleArn,
+                unauthenticated: this.unAuthenticatedRole.roleArn,
+            },
+            roleMappings: {
+                adminsMapping: {
+                    type: 'Token',
+                    ambiguousRoleResolution: 'AuthenticatedRole',
+                    identityProvider: `${this.userPool.userPoolProviderName}:${this.userPoolClient.userPoolClientId}`,
+                },
+            },
+        });
     }
 }
