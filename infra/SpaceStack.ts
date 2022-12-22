@@ -1,5 +1,10 @@
 import { Stack, StackProps } from 'aws-cdk-lib';
-import { LambdaIntegration, RestApi } from 'aws-cdk-lib/aws-apigateway';
+import {
+    AuthorizationType,
+    LambdaIntegration,
+    MethodOptions,
+    RestApi,
+} from 'aws-cdk-lib/aws-apigateway';
 import {
     Code,
     Function as LambdaFunction,
@@ -36,10 +41,21 @@ export class SpaceStack extends Stack {
             handler: 'hello.main',
         });
 
+        const optionsWithAuthorizer: MethodOptions = {
+            authorizationType: AuthorizationType.COGNITO,
+            authorizer: {
+                authorizerId: this.authorizer.authorizer.authorizerId,
+            },
+        };
+
         // API Lambda Integration
         const helloLambdaIntegration = new LambdaIntegration(helloLambda);
         const helloLambdaResource = this.api.root.addResource('hello');
-        helloLambdaResource.addMethod('GET', helloLambdaIntegration);
+        helloLambdaResource.addMethod(
+            'GET',
+            helloLambdaIntegration,
+            optionsWithAuthorizer
+        );
 
         // Spaces API Lambda integration
         const spaceResource = this.api.root.addResource('spaces');
