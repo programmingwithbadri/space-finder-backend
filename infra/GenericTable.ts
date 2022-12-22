@@ -36,6 +36,7 @@ export class GenericTable {
 
     private initialize() {
         this.createTable();
+        this.addSecondaryIndexes();
         this.createLambdas();
         this.grantTableAccess();
     }
