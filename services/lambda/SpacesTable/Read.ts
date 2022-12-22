@@ -1,6 +1,7 @@
 import { DynamoDB } from 'aws-sdk';
 import {
     APIGatewayProxyEvent,
+    APIGatewayProxyEventQueryStringParameters,
     APIGatewayProxyResult,
     Context,
 } from 'aws-lambda';
@@ -21,32 +22,70 @@ async function handler(
     try {
         if (event.queryStringParameters) {
             if (PRIMARY_KEY! in event.queryStringParameters) {
-                const keyValue = event.queryStringParameters[PRIMARY_KEY!];
-                const response = await dbClient
-                    .query({
-                        TableName: TABLE_NAME!,
-                        KeyConditionExpression: '#zz = :zzzz',
-                        ExpressionAttributeNames: {
-                            '#zz': PRIMARY_KEY!,
-                        },
-                        ExpressionAttributeValues: {
-                            ':zzzz': keyValue,
-                        },
-                    })
-                    .promise();
-                result.body = JSON.stringify(response);
+                result.body = await queryWithPrimaryPartition(
+                    event.queryStringParameters
+                );
+            } else {
+                result.body = await queryWithSecondaryPartition(
+                    event.queryStringParameters
+                );
             }
         } else {
-            const response = await dbClient
-                .scan({
-                    TableName: TABLE_NAME!,
-                })
-                .promise();
-            result.body = JSON.stringify(response);
+            result.body = await scanTable();
         }
     } catch (error: any) {
         result.body = error.message;
     }
 
     return result;
+}
+
+async function scanTable() {
+    const response = await dbClient
+        .scan({
+            TableName: TABLE_NAME!,
+        })
+        .promise();
+
+    return JSON.stringify(response.Items);
+}
+
+async function queryWithPrimaryPartition(
+    queryParams: APIGatewayProxyEventQueryStringParameters
+) {
+    const keyValue = queryParams[PRIMARY_KEY!];
+    const response = await dbClient
+        .query({
+            TableName: TABLE_NAME!,
+            KeyConditionExpression: '#zz = :zzzz',
+            ExpressionAttributeNames: {
+                '#zz': PRIMARY_KEY!,
+            },
+            ExpressionAttributeValues: {
+                ':zzzz': keyValue,
+            },
+        })
+        .promise();
+    return JSON.stringify(response.Items);
+}
+
+async function queryWithSecondaryPartition(
+    queryParams: APIGatewayProxyEventQueryStringParameters
+) {
+    const queryKey = Object.keys(queryParams)[0];
+    const queryValue = queryParams[queryKey!];
+    const response = await dbClient
+        .query({
+            TableName: TABLE_NAME!,
+            IndexName: queryKey,
+            KeyConditionExpression: '#zz = :zzzz',
+            ExpressionAttributeNames: {
+                '#zz': queryKey,
+            },
+            ExpressionAttributeValues: {
+                ':zzzz': queryValue,
+            },
+        })
+        .promise();
+    return JSON.stringify(response.Items);
 }

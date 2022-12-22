@@ -11,6 +11,7 @@ export interface TableProps {
     deleteLambdaPath?: string;
     tableName: string;
     primaryKey: string;
+    secondaryIndexes?: string[];
 }
 export class GenericTable {
     private stack: Stack;
@@ -40,7 +41,7 @@ export class GenericTable {
     }
 
     private createTable() {
-        new Table(this.stack, this.props.tableName, {
+        this.table = new Table(this.stack, this.props.tableName, {
             partitionKey: {
                 name: this.props.primaryKey,
                 type: AttributeType.STRING,
@@ -103,6 +104,20 @@ export class GenericTable {
                 PRIMARY_KEY: this.props.primaryKey,
             },
         });
+    }
+
+    private addSecondaryIndexes() {
+        if (this.props.secondaryIndexes) {
+            for (const secondaryIndex of this.props.secondaryIndexes) {
+                this.table.addGlobalSecondaryIndex({
+                    indexName: secondaryIndex,
+                    partitionKey: {
+                        name: secondaryIndex,
+                        type: AttributeType.STRING,
+                    },
+                });
+            }
+        }
     }
 
     private grantTableAccess() {
