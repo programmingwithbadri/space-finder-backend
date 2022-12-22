@@ -33,7 +33,7 @@ async function handler(
         } else {
             result.body = await scanTable();
         }
-    } catch (error: any) {
+    } catch (error) {
         result.body = error.message;
     }
 

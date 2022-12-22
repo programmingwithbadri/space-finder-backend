@@ -30,7 +30,7 @@ async function handler(
                 })
                 .promise();
             result.body = JSON.stringify(response);
-        } catch (error: any) {
+        } catch (error) {
             result.body = error.message;
         }
     }
