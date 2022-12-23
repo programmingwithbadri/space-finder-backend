@@ -15,6 +15,7 @@ import { join } from 'path';
 import { AuthorizerWrapper } from './auth/AuthorizerWrapper';
 import { GenericTable } from './GenericTable';
 import { Bucket, HttpMethods } from 'aws-cdk-lib/aws-s3';
+import { WebAppDeployment } from './WebAppDeployment';
 
 export class SpaceStack extends Stack {
     private api = new RestApi(this, 'SpaceApi');
@@ -42,6 +43,8 @@ export class SpaceStack extends Stack {
             this.api,
             this.spacesPhotosBucket.bucketArn + '/*'
         );
+
+        new WebAppDeployment(this, this.suffix);
 
         const optionsWithAuthorizer: MethodOptions = {
             authorizationType: AuthorizationType.COGNITO,
