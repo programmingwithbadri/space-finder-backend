@@ -35,15 +35,13 @@ export class SpaceStack extends Stack {
     constructor(scope: Construct, id: string, props: StackProps) {
         super(scope, id, props);
 
-        this.authorizer = new AuthorizerWrapper(this, this.api);
         this.initializeSuffix();
         this.initializeSpacesPhotosBucket();
-
-        const helloLambda = new LambdaFunction(this, 'helloLambda', {
-            runtime: Runtime.NODEJS_16_X,
-            code: Code.fromAsset(join(__dirname, '..', 'services', 'lambda')),
-            handler: 'hello.main',
-        });
+        this.authorizer = new AuthorizerWrapper(
+            this,
+            this.api,
+            this.spacesPhotosBucket.bucketArn + '/*'
+        );
 
         const optionsWithAuthorizer: MethodOptions = {
             authorizationType: AuthorizationType.COGNITO,
@@ -51,15 +49,6 @@ export class SpaceStack extends Stack {
                 authorizerId: this.authorizer.authorizer.authorizerId,
             },
         };
-
-        // API Lambda Integration
-        const helloLambdaIntegration = new LambdaIntegration(helloLambda);
-        const helloLambdaResource = this.api.root.addResource('hello');
-        helloLambdaResource.addMethod(
-            'GET',
-            helloLambdaIntegration,
-            optionsWithAuthorizer
-        );
 
         // Spaces API Lambda integration
         const spaceResource = this.api.root.addResource('spaces');

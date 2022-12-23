@@ -4,7 +4,7 @@ import {
     APIGatewayProxyResult,
     Context,
 } from 'aws-lambda';
-
+import { addCorsHeader } from '../../Shared/Utils';
 const TABLE_NAME = process.env.TABLE_NAME as string;
 const PRIMARY_KEY = process.env.PRIMARY_KEY as string;
 const dbClient = new DynamoDB.DocumentClient();
@@ -18,10 +18,12 @@ async function handler(
         body: 'Hello from DynamoDB',
     };
 
-    const spaceId = event.queryStringParameters?.[PRIMARY_KEY];
-    if (spaceId) {
-        try {
-            const response = await dbClient
+    addCorsHeader(result);
+
+    try {
+        const spaceId = event.queryStringParameters?.[PRIMARY_KEY];
+        if (spaceId) {
+            const deleteResult = await dbClient
                 .delete({
                     TableName: TABLE_NAME,
                     Key: {
@@ -29,11 +31,10 @@ async function handler(
                     },
                 })
                 .promise();
-            result.body = JSON.stringify(response);
-        } catch (error) {
-            result.body = error.message;
+            result.body = JSON.stringify(deleteResult);
         }
+    } catch (error) {
+        result.body = error.message;
     }
-
     return result;
 }
